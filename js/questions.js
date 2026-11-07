@@ -1,0 +1,272 @@
+// Original practice questions written for this site (not copied from official IELTS materials).
+
+export const PART1 = [
+  { topic: "work or studies", qs: [
+    "Do you work, or are you a student at the moment?",
+    "What do you enjoy most about what you do?",
+    "Is there anything you'd like to change about your job or studies?",
+    "Do you see yourself doing the same kind of work in ten years?" ] },
+  { topic: "your hometown", qs: [
+    "Where is your hometown?",
+    "What do you like most about it?",
+    "How has it changed since you were a child?",
+    "Would you like to live there again in the future? Why or why not?" ] },
+  { topic: "where you live", qs: [
+    "Do you live in a house or an apartment?",
+    "Which room do you spend the most time in?",
+    "If you could change one thing about your home, what would it be?",
+    "Is your neighbourhood a good place for young people?" ] },
+  { topic: "daily routines", qs: [
+    "What does a typical morning look like for you?",
+    "Are you more of a morning person or a night person?",
+    "Has your routine changed much in the last few years?",
+    "Is there anything you do every single day without fail?" ] },
+  { topic: "food and cooking", qs: [
+    "What kind of food do you usually eat on a weekday?",
+    "Do you enjoy cooking? Why or why not?",
+    "Is there a food you hated as a child but enjoy now?",
+    "Do you prefer eating at home or eating out?" ] },
+  { topic: "the weather", qs: [
+    "What's the weather usually like where you live?",
+    "Which season do you like best?",
+    "Does the weather ever affect your mood?",
+    "Would you rather live somewhere hot or somewhere cold?" ] },
+  { topic: "music", qs: [
+    "What kind of music do you listen to most?",
+    "When do you usually listen to music?",
+    "Did you ever learn to play an instrument?",
+    "Has your taste in music changed as you've got older?" ] },
+  { topic: "reading", qs: [
+    "Do you read much in your free time?",
+    "Do you prefer printed books or reading on a screen?",
+    "What did you like to read when you were younger?",
+    "Is there a book you'd recommend to a friend?" ] },
+  { topic: "phones and apps", qs: [
+    "How much time do you spend on your phone each day?",
+    "Which app do you use the most?",
+    "Is there an app you think everyone should have?",
+    "Do you ever try to spend less time on your phone?" ] },
+  { topic: "getting around", qs: [
+    "How do you usually get around your city?",
+    "Is public transport good where you live?",
+    "Do you enjoy long journeys?",
+    "How do you think transport will change in the future?" ] },
+  { topic: "weekends", qs: [
+    "What do you usually do on weekends?",
+    "Do you prefer busy weekends or relaxing ones?",
+    "What did you do last weekend?",
+    "Is there something you'd like to do on a weekend but never have time for?" ] },
+  { topic: "exercise", qs: [
+    "Do you do any kind of exercise regularly?",
+    "Did you play any sports at school?",
+    "Do you prefer exercising alone or with other people?",
+    "What stops people from exercising more?" ] },
+  { topic: "friends", qs: [
+    "Do you have a lot of close friends?",
+    "How often do you catch up with your friends?",
+    "What do you usually do together?",
+    "Is it easy to make new friends as an adult?" ] },
+  { topic: "shopping", qs: [
+    "Do you enjoy shopping?",
+    "Do you prefer shopping online or in person?",
+    "What was the last thing you bought for yourself?",
+    "Do you ever buy things you don't really need?" ] },
+  { topic: "sleep", qs: [
+    "How many hours do you usually sleep?",
+    "Do you ever have a nap during the day?",
+    "What helps you sleep well?",
+    "Did you sleep more or less when you were a teenager?" ] },
+  { topic: "learning languages", qs: [
+    "What languages can you speak?",
+    "What's the hardest part of learning English for you?",
+    "How do you usually practise speaking?",
+    "Would you like to learn another language in the future?" ] },
+  { topic: "taking photos", qs: [
+    "Do you take a lot of photos?",
+    "What do you usually take photos of?",
+    "Do you prefer taking photos or being in them?",
+    "Do you ever print your photos?" ] },
+];
+
+export const PART2 = [
+  { id: "skill", theme: "learning skills",
+    cue: "Describe a skill you learned that took a long time to master.",
+    bullets: ["what the skill is", "when and how you learned it", "what difficulties you had"],
+    explain: "and explain how you feel about this skill now.",
+    part3: [
+      "Which skills are most valued by employers in your country?",
+      "Is it better to learn a new skill from a teacher or on your own using the internet?",
+      "Why do you think some people give up when they're learning something new?",
+      "Do schools teach the skills young people will actually need in the future?",
+      "How might artificial intelligence change the skills people need for work?" ] },
+  { id: "nature", theme: "nature and the outdoors",
+    cue: "Describe a natural place you enjoyed visiting.",
+    bullets: ["where it is", "when you went there and who with", "what you did there"],
+    explain: "and explain why you enjoyed it so much.",
+    part3: [
+      "Why do people in cities often feel the need to get out into nature?",
+      "Should governments spend more money protecting natural areas?",
+      "How has tourism affected natural places?",
+      "Do children today spend enough time outdoors?",
+      "What can ordinary people do to protect the environment?" ] },
+  { id: "influence", theme: "influential people",
+    cue: "Describe a person who has influenced the way you think.",
+    bullets: ["who this person is", "how you know them", "what they taught you or showed you"],
+    explain: "and explain why their influence has been so important to you.",
+    part3: [
+      "Who has more influence on young people today: parents, teachers or celebrities?",
+      "What qualities make someone a good role model?",
+      "Do you think social media influencers have too much power?",
+      "Is it possible to be influenced by someone you've never met?",
+      "How does the influence of our friends change as we get older?" ] },
+  { id: "tech", theme: "technology in daily life",
+    cue: "Describe a piece of technology you couldn't live without.",
+    bullets: ["what it is", "when you started using it", "what you use it for"],
+    explain: "and explain why it's so important to you.",
+    part3: [
+      "Has technology made people's lives less stressful or more stressful?",
+      "Why are older people sometimes reluctant to use new technology?",
+      "Should children be limited in how much technology they use?",
+      "Which jobs do you think will disappear because of technology?",
+      "Is it a problem that a few big companies control so much technology?" ] },
+  { id: "mind", theme: "changing opinions",
+    cue: "Describe a time you changed your mind about something important.",
+    bullets: ["what the situation was", "what your original opinion was", "what made you change your mind"],
+    explain: "and explain how you felt after changing your mind.",
+    part3: [
+      "Why do people find it so hard to change their opinions?",
+      "Is changing your mind a sign of weakness or of strength?",
+      "How do the news and social media shape people's opinions?",
+      "Should politicians be criticised for changing their positions?",
+      "Do people become more fixed in their views as they get older?" ] },
+  { id: "learnt", theme: "learning from media",
+    cue: "Describe a book, article or video that taught you something useful.",
+    bullets: ["what it was", "how you came across it", "what you learned from it"],
+    explain: "and explain how you have used what you learned.",
+    part3: [
+      "Do people learn more from books or from videos these days?",
+      "How can people tell whether information online is reliable?",
+      "Will printed books eventually disappear?",
+      "Why are short videos so popular?",
+      "Should schools use more videos and fewer textbooks?" ] },
+  { id: "goal", theme: "goals and ambitions",
+    cue: "Describe a goal you are currently working towards.",
+    bullets: ["what the goal is", "when you set it", "what you are doing to achieve it"],
+    explain: "and explain why this goal matters to you.",
+    part3: [
+      "Is it important for young people to set long-term goals?",
+      "Why do so many people fail to keep their New Year's resolutions?",
+      "Are people today more ambitious than people in the past?",
+      "Should success be measured by money?",
+      "How can parents help children set realistic goals?" ] },
+  { id: "meal", theme: "food and sharing meals",
+    cue: "Describe a memorable meal you shared with other people.",
+    bullets: ["where and when it was", "who you were with", "what you ate"],
+    explain: "and explain why this meal was so memorable.",
+    part3: [
+      "Why is food such an important part of celebrations?",
+      "Do families eat together less often than they used to?",
+      "How has the food people eat in your country changed?",
+      "Is fast food a serious problem for society?",
+      "Should cooking be taught as a subject at school?" ] },
+  { id: "helped", theme: "helping others",
+    cue: "Describe a time you helped someone.",
+    bullets: ["who you helped", "what the situation was", "how you helped them"],
+    explain: "and explain how you felt about helping this person.",
+    part3: [
+      "Are people less willing to help strangers than they used to be?",
+      "Should volunteering be compulsory for students?",
+      "Is it the government's responsibility or the community's to help people in need?",
+      "Why do some people find it hard to ask for help?",
+      "How can technology help people support each other?" ] },
+  { id: "city", theme: "cities and places to live",
+    cue: "Describe a city you would like to live in in the future.",
+    bullets: ["which city it is", "how you know about it", "what you would do there"],
+    explain: "and explain why you would like to live there.",
+    part3: [
+      "What makes a city a good place to live?",
+      "Why do so many young people move to big cities?",
+      "What problems do large cities face?",
+      "Will more people work remotely from smaller towns in the future?",
+      "How can cities be made more environmentally friendly?" ] },
+  { id: "busy", theme: "time and busy lives",
+    cue: "Describe a time when you were extremely busy.",
+    bullets: ["when it was", "what you had to do", "how you managed your time"],
+    explain: "and explain how you felt during that period.",
+    part3: [
+      "Why do people today seem busier than ever?",
+      "Is being busy the same as being productive?",
+      "What are the effects of stress on people's health?",
+      "Should employers do more to stop people overworking?",
+      "How can people achieve a better work-life balance?" ] },
+  { id: "problem", theme: "problem solving",
+    cue: "Describe a problem you solved in a creative way.",
+    bullets: ["what the problem was", "when it happened", "how you solved it"],
+    explain: "and explain why you think your solution was creative.",
+    part3: [
+      "Is creativity something people are born with or something they can learn?",
+      "Do schools encourage creativity enough?",
+      "Which jobs need the most creativity?",
+      "Are children more creative than adults?",
+      "Can computers ever be truly creative?" ] },
+  { id: "object", theme: "possessions and memories",
+    cue: "Describe an object you own that has sentimental value.",
+    bullets: ["what it is", "how you got it", "where you keep it"],
+    explain: "and explain why it means so much to you.",
+    part3: [
+      "Why do people keep things they no longer use?",
+      "Do young people value possessions differently from older people?",
+      "Is there too much emphasis on owning things in modern society?",
+      "What kinds of things do families pass down to the next generation?",
+      "Will digital possessions ever mean as much as physical ones?" ] },
+  { id: "team", theme: "teamwork",
+    cue: "Describe a time you worked in a team to achieve something.",
+    bullets: ["what the task was", "who was in the team", "what your role was"],
+    explain: "and explain how successful the team was.",
+    part3: [
+      "What makes a team work well together?",
+      "Is it better to have one strong leader or to share decisions?",
+      "Why do some people prefer to work alone?",
+      "How does teamwork at school differ from teamwork at work?",
+      "Has remote work made teamwork harder?" ] },
+  { id: "local", theme: "local communities",
+    cue: "Describe a change you would like to see in your local area.",
+    bullets: ["what the change is", "why it is needed", "how it could be made"],
+    explain: "and explain how it would affect people living there.",
+    part3: [
+      "Who should be responsible for improving local areas?",
+      "How have neighbourhoods changed over the last few decades?",
+      "Do people know their neighbours as well as they used to?",
+      "Should local residents have a say in new building projects?",
+      "What facilities are most important in a community?" ] },
+  { id: "mistake", theme: "mistakes and learning",
+    cue: "Describe a time you learned something important from a mistake.",
+    bullets: ["what the mistake was", "when it happened", "what the consequences were"],
+    explain: "and explain what you learned from it.",
+    part3: [
+      "Why are some people afraid of making mistakes?",
+      "Should teachers punish students for making mistakes?",
+      "Can companies benefit from admitting their mistakes?",
+      "Do we learn more from success or from failure?",
+      "How do different cultures view failure?" ] },
+];
+
+export const SCRIPT = {
+  opening: "Hello. In this first part of the test, I'd like to ask you some questions about yourself.",
+  topic: (t) => `Let's talk about ${t}.`,
+  part2Intro: "Thank you. Now, I'm going to give you a topic, and I'd like you to talk about it for one to two minutes. You'll have one minute to think about what you're going to say, and you can make some notes if you wish. Here's your topic.",
+  part2Start: "All right. Your preparation time is over. Please start speaking now. I'll stop you when the time is up.",
+  part2End: "Thank you.",
+  part3Intro: (theme) => `We've been talking about ${theme}. Now I'd like to ask you some more general questions related to this.`,
+  closing: "Thank you. That's the end of the speaking test.",
+};
+
+export function cueCardText(c) {
+  return `${c.cue}\nYou should say:\n- ${c.bullets.join("\n- ")}\n${c.explain}`;
+}
+
+export function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
