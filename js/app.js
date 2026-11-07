@@ -16,7 +16,7 @@ const main = $("#main");
 const recorder = new AnswerRecorder();
 const ABORT = new Error("aborted");
 const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const MODE_LABEL = { mock: "실전 모의고사", practice: "파트별 연습", "432": "4-3-2 연습" };
+const MODE_LABEL = { mock: "실전 모의고사", practice: "연습", "432": "4-3-2 연습" };
 
 function toast(msg, ms = 4500) {
   const t = document.createElement("div");
@@ -447,7 +447,7 @@ pages.home = async () => {
     </section>
     <section class="grid4">
       <a class="tile" href="#mock"><div class="tile-ic">🎯</div><b>실전 모의고사</b><span>Part 1→2→3 전체, 약 12~14분</span></a>
-      <a class="tile" href="#practice"><div class="tile-ic">🧩</div><b>파트별 연습</b><span>한 문제씩 바로 교정</span></a>
+      <a class="tile" href="#practice"><div class="tile-ic">🧩</div><b>연습 (바로 교정)</b><span>한 질문씩 답하고 즉시 교정</span></a>
       <a class="tile" href="#432"><div class="tile-ic">⏱</div><b>4-3-2 연습</b><span>같은 주제를 4분·3분·2분</span></a>
       <a class="tile" href="#review"><div class="tile-ic">🧠</div><b>표현 복습</b><span>${due ? `오늘 복습할 표현 ${due}개` : "복습할 표현 없음"}</span></a>
     </section>
@@ -579,7 +579,7 @@ pages.practice = async () => {
   const sid = "practice-" + localDate();
   main.innerHTML = `
     <section class="card" id="pr-setup">
-      <h2>🧩 파트별 연습</h2>
+      <h2>🧩 연습 · 한 질문씩 바로 교정</h2>
       <p>한 문제씩 답하고 바로 교정을 받아요. 교정본을 듣고 <b>같은 질문에 다시 답하기</b>를 하면, 방금 배운 표현을 직접 꺼내 쓰는 연습이 돼요.</p>
       <div class="seg" id="pr-part">
         <button data-p="1" class="on">Part 1</button><button data-p="2">Part 2</button><button data-p="3">Part 3</button>
@@ -663,7 +663,7 @@ async function runPractice(q, sid) {
     stopRunner();
     await withLock(async () => {
       let s = await getSession(sid);
-      if (!s) s = { id: sid, date: new Date().toISOString(), mode: "practice", title: `파트별 연습 (${localDate()})`, answers: [] };
+      if (!s) s = { id: sid, date: new Date().toISOString(), mode: "practice", title: `연습 (${localDate()})`, answers: [] };
       s.answers.push(ans);
       await saveSession(s);
     });
