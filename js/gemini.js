@@ -56,6 +56,7 @@ const ANALYSIS_SCHEMA = {
     no_speech: { type: "BOOLEAN" },
     transcript: S,
     corrected: S,
+    corrected_ko: { type: "ARRAY", items: S },
     changes: { type: "ARRAY", items: { type: "OBJECT", properties: { original: S, improved: S, reason_ko: S }, required: ["original", "improved", "reason_ko"] } },
     expressions: { type: "ARRAY", items: { type: "OBJECT", properties: {
       expression: S, type: S, meaning_ko: S, nuance_ko: S, stress: S, ipa: S, replaces: S, example: S, register: S },
@@ -90,6 +91,7 @@ Your job:
    - Grammar must be fully accurate and show natural range (conditionals, relative clauses, modals of speculation, passives, cleft sentences) where it fits.
    - Australian English spelling (e.g. "colour", "organise").
    - Plain text only, no markdown, no bullet points.
+2b. CORRECTED_KO: a natural Korean translation of CORRECTED as an array with exactly one Korean sentence per English sentence, in the same order (split CORRECTED at sentence-ending . ! ?). Translate the meaning and nuance naturally (idioms rendered as natural Korean, not word-for-word). Empty array if no_speech.
 3. CHANGES: 4–10 of the most instructive edits. "original" = learner's words (short span), "improved" = your version, "reason_ko" = why, in Korean.
 4. EXPRESSIONS: Extract 6–12 of the most valuable, reusable expressions you used in CORRECTED (chunks, collocations, idioms, phrasal verbs, discourse markers, advanced words). Prefer multi-word chunks the learner can reuse in other topics. For each:
    - expression: exactly as it can be reused (generalise pronouns, e.g. "it dawned on me that…" or "be torn between A and B")
@@ -156,6 +158,21 @@ export async function generateCueCard(hint) {
   });
   const c = parseJSON(textOf(json));
   return { id: "ai-" + Date.now().toString(36), ...c };
+}
+
+// Sentence-by-sentence Korean translation (for answers corrected before translations existed).
+export async function translateToKorean(sentencesEn) {
+  const s = getSettings();
+  const json = await call(s.textModel, {
+    contents: [{ role: "user", parts: [{ text:
+      "Translate each English sentence into natural Korean, conveying nuance (render idioms naturally, not word-for-word). " +
+      `Return a JSON array of exactly ${sentencesEn.length} Korean strings, one per sentence, same order.\n\n` +
+      JSON.stringify(sentencesEn) }] }],
+    generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "STRING" } }, temperature: 0.3 },
+  });
+  const arr = JSON.parse(textOf(json));
+  if (!Array.isArray(arr)) throw new Error("번역 응답을 해석하지 못했어요.");
+  return arr;
 }
 
 export async function testKey() {

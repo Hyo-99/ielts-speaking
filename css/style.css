@@ -189,3 +189,10 @@ summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
 #toasts { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); display: grid; gap: .4rem; z-index: 50; width: min(92vw, 520px); }
 .toast { background: var(--ink); color: var(--bg); padding: .7rem 1rem; border-radius: 10px; font-size: .9rem; box-shadow: var(--shadow); }
 .sticky-save { position: sticky; bottom: .5rem; }
+
+/* Korean translation of the corrected answer */
+.ko-line, .ko-block { display: none; }
+.corrected.bilingual .sent { display: block; margin-top: .5rem; }
+.corrected.bilingual .sent:first-child { margin-top: 0; }
+.corrected.bilingual .ko-line { display: block; font-size: .92rem; color: var(--muted); line-height: 1.6; }
+.corrected.bilingual .ko-block { display: block; margin-top: .8rem; padding-top: .6rem; border-top: 1px dashed var(--line); font-size: .92rem; color: var(--muted); }

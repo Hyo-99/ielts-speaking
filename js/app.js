@@ -4,7 +4,7 @@ import {
   getBank, addToBank, saveBankItem, deleteBankItem, INTERVAL_DAYS, exportAll, importAll,
 } from "./storage.js";
 import { AnswerRecorder, hasSpeechRecognition, decodeAudio, spokenWords, beep, metrics } from "./audio.js";
-import { analyzeAnswer, transcribe, generateCueCard, testKey, hasKey } from "./gemini.js";
+import { analyzeAnswer, transcribe, generateCueCard, testKey, hasKey, translateToKorean } from "./gemini.js";
 import { speak, stopSpeaking, voices, onVoicesReady, unlockAudio } from "./tts.js";
 
 // ---------------- helpers ----------------
@@ -362,8 +362,9 @@ function answerCard(a, { practice = false } = {}) {
         <div class="sec-head"><h4>원어민 교정본</h4>
           <div class="btns"><button class="btn small" data-say="${esc(an.corrected)}">🔊 듣기</button>
           <button class="btn small" data-say="${esc(an.corrected)}" data-rate="0.8">🐢 천천히</button>
+          ${koBtn(a)}
           <button class="btn small ghost" data-toggle-diff>🔍 내 답변과 비교</button></div></div>
-        <div class="corrected">${sentences(an.corrected).map((x) => `<span class="sent" data-say="${esc(x)}" title="클릭하면 이 문장만 들려줘요">${esc(x)}</span>`).join(" ")}</div>
+        ${correctedHtml(a)}
         <div class="diff hidden">${diffWords(myText, an.corrected)}<p class="muted small">빨간 줄 = 내가 한 말 중 바뀐 부분, 초록 = 새로 들어간 표현</p></div>
         <p class="muted small">문장을 클릭하면 그 문장만 들을 수 있어요. 한 문장씩 듣고 따라 말해 보세요(쉐도잉).</p>
       </section>
@@ -401,6 +402,29 @@ function answerCard(a, { practice = false } = {}) {
   return `<article class="answer" id="ans-${a.id}">${head}${rec}${body}${again}</article>`;
 }
 
+// ---- Korean translation of the corrected answer ----
+const showKo = new Set();
+function koLines(an) {
+  const en = sentences(an.corrected || "");
+  let ko = an.corrected_ko;
+  if (typeof ko === "string") ko = ko.split(/\n+/).filter(Boolean);
+  return { en, ko: Array.isArray(ko) ? ko : [] };
+}
+function koBtn(a) {
+  const { ko } = koLines(a.analysis);
+  if (!ko.length) return `<button class="btn small ghost" data-translate="${a.id}">🇰🇷 한국어 번역</button>`;
+  return `<button class="btn small ghost" data-toggle-ko="${a.id}">🇰🇷 ${showKo.has(a.id) ? "번역 숨기기" : "한국어 번역"}</button>`;
+}
+function correctedHtml(a) {
+  const { en, ko } = koLines(a.analysis);
+  const sent = (x) => `<span class="sent" data-say="${esc(x)}" title="클릭하면 이 문장만 들려줘요">${esc(x)}</span>`;
+  const on = showKo.has(a.id) && ko.length;
+  if (ko.length === en.length) {
+    return `<div class="corrected${on ? " bilingual" : ""}">${en.map((x, i) => `${sent(x)}<span class="ko-line">${esc(ko[i])}</span>`).join(" ")}</div>`;
+  }
+  return `<div class="corrected${on ? " bilingual" : ""}">${en.map(sent).join(" ")}${ko.length ? `<div class="ko-block">${ko.map(esc).join(" ")}</div>` : ""}</div>`;
+}
+
 const audioUrls = new Map();
 async function hydrate(root) {
   for (const el of $$("audio[data-audio-key]", root)) {
@@ -431,6 +455,32 @@ window.addEventListener("answer-updated", (e) => {
 document.addEventListener("click", async (e) => {
   const sayBtn = e.target.closest("[data-say]");
   if (sayBtn) { e.preventDefault(); unlockAudio(); speak(sayBtn.dataset.say, { rate: Number(sayBtn.dataset.rate) || undefined }); return; }
+  const koToggle = e.target.closest("[data-toggle-ko]");
+  if (koToggle) {
+    const id = koToggle.dataset.toggleKo;
+    showKo.has(id) ? showKo.delete(id) : showKo.add(id);
+    const box = $(".corrected", koToggle.closest(".corrected-sec"));
+    box.classList.toggle("bilingual", showKo.has(id));
+    $(".diff", koToggle.closest(".corrected-sec")).classList.add("hidden");
+    box.classList.remove("hidden");
+    koToggle.textContent = showKo.has(id) ? "🇰🇷 번역 숨기기" : "🇰🇷 한국어 번역";
+    return;
+  }
+  const trBtn = e.target.closest("[data-translate]");
+  if (trBtn) {
+    const sid = trBtn.closest("[data-sid]")?.dataset.sid;
+    const aid = trBtn.dataset.translate;
+    if (!hasKey()) { toast("설정에서 API 키를 먼저 넣어 주세요."); return; }
+    trBtn.disabled = true; trBtn.textContent = "번역 중…";
+    try {
+      const s = await getSession(sid);
+      const a = s.answers.find((x) => x.id === aid);
+      const ko = await translateToKorean(sentences(a.analysis.corrected));
+      showKo.add(aid);
+      await updateAnswer(sid, aid, { analysis: { ...a.analysis, corrected_ko: ko } });
+    } catch (err) { toast("번역 실패: " + err.message); trBtn.disabled = false; trBtn.textContent = "🇰🇷 한국어 번역"; }
+    return;
+  }
   const diffBtn = e.target.closest("[data-toggle-diff]");
   if (diffBtn) {
     const sec = diffBtn.closest(".corrected-sec");
