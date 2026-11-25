@@ -53,6 +53,7 @@ const S = { type: "STRING" }, N = { type: "NUMBER" };
 const ANALYSIS_SCHEMA = {
   type: "OBJECT",
   properties: {
+    no_speech: { type: "BOOLEAN" },
     transcript: S,
     corrected: S,
     changes: { type: "ARRAY", items: { type: "OBJECT", properties: { original: S, improved: S, reason_ko: S }, required: ["original", "improved", "reason_ko"] } },
@@ -64,23 +65,26 @@ const ANALYSIS_SCHEMA = {
     progress_ko: S,
     tips_ko: S,
   },
-  required: ["transcript", "corrected", "changes", "expressions", "feedback", "bands", "tips_ko"],
+  required: ["no_speech", "transcript", "corrected", "changes", "expressions", "feedback", "bands", "tips_ko"],
 };
 
 const LENGTH_GUIDE = {
-  1: "Part 1 answers should be about 3–5 natural sentences (20–40 seconds when spoken).",
-  2: "Part 2 is a long turn: about 230–300 words (roughly 2 minutes when spoken), with a clear flow through the cue card points.",
-  3: "Part 3 answers should be about 5–8 sentences (45–70 seconds): an opinion, a reason, an example or contrast, and a short wrap-up.",
+  1: "For reference only: a strong Part 1 answer is about 3–5 sentences (20–40 seconds).",
+  2: "For reference only: a strong Part 2 long turn is about 230–300 words (roughly 2 minutes).",
+  3: "For reference only: a strong Part 3 answer is about 5–8 sentences (45–70 seconds).",
 };
+const LENGTH_NOTE = "Use this typical length ONLY to comment on length in the feedback. Never lengthen CORRECTED to reach it.";
 
 function systemPrompt(band) {
   return `You are a senior IELTS Speaking examiner and an Australian English speaking coach.
 The learner is a Korean native speaker preparing for IELTS Speaking. Their goal is to be able to say exactly what THEY want to say, the way a highly articulate native speaker would in natural conversation.
 
 Your job:
-1. TRANSCRIPT: If audio is provided, transcribe it VERBATIM: keep fillers (um, uh, er), false starts, repetitions, self-corrections and grammar mistakes. Do NOT clean it up. Mark unclear words as [inaudible]. If no audio is provided, copy the given transcript.
+0. NO_SPEECH: If the learner did not actually answer (silence, background noise, breathing, only "um"/"uh", or only a word or two), set no_speech to true, transcript to what was actually heard (or ""), corrected to "", changes and expressions to empty arrays, bands to 0, and explain briefly in tips_ko that there was no answer to correct. NEVER invent, guess or imagine an answer the learner did not say.
+1. TRANSCRIPT: If audio is provided, transcribe it VERBATIM: keep fillers (um, uh, er), false starts, repetitions, self-corrections and grammar mistakes. Do NOT clean it up. Mark unclear words as [inaudible]. Transcribe only what is really audible; do not fill gaps. If no audio is provided, copy the given transcript.
 2. CORRECTED: Rewrite the answer as a Band ${band}+ native speaker would SAY it out loud in the exam.
-   - Keep the learner's own ideas, opinions, examples and personal details. Do not replace their content with a different answer; you may add a short linking phrase or a natural elaboration that follows from what they said.
+   - Correct ONLY what the learner actually said. Keep their ideas, opinions, examples and personal details, and do NOT add new ideas, reasons, examples or details they did not say. Do not finish an unfinished answer. You may only add minimal linking words needed for the sentences to connect.
+   - If the answer was short or cut off, CORRECTED stays equally short and ends where the learner stopped; say in the feedback (Korean) that it was too short or unfinished and what kind of content a full answer would need.
    - Spoken register: contractions, natural discourse markers ("To be honest", "The thing is", "Mind you"), idiomatic language and phrasal verbs. Colloquial is fine; it must sound spoken, not like an essay.
    - Lexical upgrade: use precise, less common vocabulary, strong collocations and idioms where they genuinely fit. Natural > fancy. No forced or outdated idioms.
    - Grammar must be fully accurate and show natural range (conditionals, relative clauses, modals of speculation, passives, cleft sentences) where it fits.
@@ -108,11 +112,11 @@ export async function analyzeAnswer({ part, question, cueCard, transcript, wavBl
   const parts = [];
   let task = `IELTS Speaking Part ${part}.\n`;
   task += cueCard ? `Cue card:\n${cueCard}\n` : `Question: ${question}\n`;
-  task += LENGTH_GUIDE[part] + "\n";
+  task += LENGTH_GUIDE[part] + " " + LENGTH_NOTE + "\n";
   if (rounds && rounds.length) {
     task += `\nThe learner did the 4-3-2 fluency technique: the same talk three times in 4, 3 and 2 minutes.\n`;
-    rounds.forEach((r, i) => { task += `\nRound ${i + 1} (${Math.round(r.durationSec)} s, ${r.wpm} wpm):\n${r.transcript || "(empty)"}\n`; });
-    task += `\nFor TRANSCRIPT, copy the Round 3 transcript. Base CORRECTED on the best ideas from all three rounds, written as an ideal 2-minute answer. Also fill progress_ko: in Korean, compare the three rounds (speed, hesitation, whether content stayed complete, which phrases became more automatic).`;
+    rounds.forEach((r, i) => { task += `\nRound ${i + 1} (${Math.round(r.durationSec)} s, ${r.wpm} wpm):\n${r.transcript || "(no speech: the learner said nothing in this round)"}\n`; });
+    task += `\nFor TRANSCRIPT, copy the last round that has speech. Base CORRECTED only on ideas the learner actually expressed across the rounds (no new content). Also fill progress_ko: in Korean, compare the three rounds (speed, hesitation, whether content stayed complete, which phrases became more automatic).`;
   } else if (wavBlob) {
     parts.push({ inlineData: { mimeType: "audio/wav", data: await blobToBase64(wavBlob) } });
     task += `\nThe learner's spoken answer is in the attached audio.`;
@@ -135,7 +139,7 @@ export async function transcribe(wavBlob, onStatus) {
   const json = await call(s.textModel, {
     contents: [{ role: "user", parts: [
       { inlineData: { mimeType: "audio/wav", data: await blobToBase64(wavBlob) } },
-      { text: "Transcribe this English speech verbatim. Keep fillers (um, uh), repetitions, false starts and grammar mistakes exactly as spoken. Output only the transcript as plain text." },
+      { text: "Transcribe this English speech verbatim. Keep fillers (um, uh), repetitions, false starts and grammar mistakes exactly as spoken. Output only the transcript as plain text. If there is no speech at all, output exactly: [NO SPEECH]. Never invent words that were not spoken." },
     ] }],
     generationConfig: { temperature: 0 },
   }, onStatus);

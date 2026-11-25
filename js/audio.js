@@ -83,8 +83,39 @@ export class AnswerRecorder {
   }
 }
 
-// Convert any recorded blob to 16 kHz mono WAV (format accepted by Gemini).
+// Decode a recording to 16 kHz mono: returns WAV (for Gemini) + how many seconds contain sound above the noise floor.
+export async function decodeAudio(blob, rate = 16000) {
+  const samples = await decodeSamples(blob, rate);
+  return { wav: encodeWav(samples, rate), voicedSec: voicedSeconds(samples, rate) };
+}
+
+// Simple energy-based voice activity estimate (30 ms frames, adaptive threshold).
+export function voicedSeconds(samples, rate) {
+  const frame = Math.round(rate * 0.03);
+  const rms = [];
+  for (let i = 0; i + frame <= samples.length; i += frame) {
+    let sum = 0;
+    for (let j = i; j < i + frame; j++) sum += samples[j] * samples[j];
+    rms.push(Math.sqrt(sum / frame));
+  }
+  if (!rms.length) return 0;
+  const sorted = rms.slice().sort((a, b) => a - b);
+  const floor = sorted[Math.floor(sorted.length * 0.2)];
+  const thr = Math.max(0.01, floor * 3);
+  return rms.filter((r) => r > thr).length * 0.03;
+}
+
+// Words actually spoken, not counting hesitation sounds.
+const HES = new Set(["um", "uh", "er", "erm", "ah", "hmm", "uhm", "mm", "mmm", "eh"]);
+export function spokenWords(text) {
+  return ((text || "").toLowerCase().match(/[a-z']+/g) || []).filter((w) => !HES.has(w)).length;
+}
+
 export async function blobToWav(blob, rate = 16000) {
+  return encodeWav(await decodeSamples(blob, rate), rate);
+}
+
+async function decodeSamples(blob, rate) {
   const buf = await blob.arrayBuffer();
   const AC = window.AudioContext || window.webkitAudioContext;
   const ac = new AC();
@@ -97,7 +128,7 @@ export async function blobToWav(blob, rate = 16000) {
   src.connect(off.destination);
   src.start();
   const rendered = await off.startRendering();
-  return encodeWav(rendered.getChannelData(0), rate);
+  return rendered.getChannelData(0);
 }
 
 function wavHeader(view, dataBytes, rate) {

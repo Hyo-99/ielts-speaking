@@ -3,7 +3,7 @@ import {
   getSettings, saveSettings, idb, uid, getSessions, getSession, saveSession, deleteSession,
   getBank, addToBank, saveBankItem, deleteBankItem, INTERVAL_DAYS, exportAll, importAll,
 } from "./storage.js";
-import { AnswerRecorder, hasSpeechRecognition, blobToWav, beep, metrics } from "./audio.js";
+import { AnswerRecorder, hasSpeechRecognition, decodeAudio, spokenWords, beep, metrics } from "./audio.js";
 import { analyzeAnswer, transcribe, generateCueCard, testKey, hasKey } from "./gemini.js";
 import { speak, stopSpeaking, voices, onVoicesReady, unlockAudio } from "./tts.js";
 
@@ -210,15 +210,29 @@ async function updateAnswerNow(sid, aid, patch) {
   window.dispatchEvent(new CustomEvent("answer-updated", { detail: { sid, aid, answer: a } }));
 }
 
-function enqueue(sid, aid) {
+function enqueue(sid, aid, opts = {}) {
   const k = sid + "/" + aid;
   if (queued.has(k)) return;
   queued.add(k);
   const marked = updateAnswer(sid, aid, { status: "queued", statusMsg: "교정 대기 중…" });
-  queue = queue.then(() => marked).then(() => processOne(sid, aid)).catch((e) => console.error(e)).finally(() => queued.delete(k));
+  queue = queue.then(() => marked).then(() => processOne(sid, aid, opts)).catch((e) => console.error(e)).finally(() => queued.delete(k));
 }
 
-async function processOne(sid, aid) {
+// Minimum evidence that the learner actually spoke (seconds of sound / recognised words).
+const MIN_VOICED_SEC = 1.2, MIN_WORDS = 3;
+async function looksEmpty(audioKey, liveTranscript) {
+  const blob = audioKey ? await idb.get("audio", audioKey) : null;
+  let dec = null;
+  if (blob) { try { dec = await decodeAudio(blob); } catch (e) { console.warn("decode failed", e); } }
+  const empty = spokenWords(liveTranscript) < MIN_WORDS && (!dec || dec.voicedSec < MIN_VOICED_SEC);
+  return { empty, dec };
+}
+
+async function removeBankItemsFor(aid) {
+  for (const b of await getBank()) if (b.answerId === aid) await deleteBankItem(b.id);
+}
+
+async function processOne(sid, aid, { force = false } = {}) {
   const s = await getSession(sid);
   const a = s?.answers.find((x) => x.id === aid);
   if (!a) return;
@@ -227,32 +241,38 @@ async function processOne(sid, aid) {
   const status = (m) => updateAnswer(sid, aid, { statusMsg: m });
   try {
     await updateAnswer(sid, aid, { status: "working", statusMsg: "AI가 답변을 듣고 교정하는 중… (보통 10~40초)" });
+    await removeBankItemsFor(aid);
+    const markEmpty = (voicedSec) => updateAnswer(sid, aid, { status: "empty", analysis: null, statusMsg: "", bankAdded: 0, error: "", voicedSec });
     let analysis;
     if (a.rounds) {
       const rounds = a.rounds.map((r) => ({ ...r }));
       for (let i = 0; i < rounds.length; i++) {
         const r = rounds[i];
-        if (set.aiTranscribe && r.audioKey && !r.aiTranscript) {
+        const { empty, dec } = await looksEmpty(r.audioKey, r.liveTranscript);
+        r.empty = empty && !force;
+        r.aiTranscript = "";
+        if (!r.empty && set.aiTranscribe && dec) {
           await status(`Round ${i + 1} 받아쓰는 중…`);
-          const blob = await idb.get("audio", r.audioKey);
-          if (blob) r.aiTranscript = await transcribe(await blobToWav(blob), status);
+          const t = await transcribe(dec.wav, status);
+          r.aiTranscript = /\[NO SPEECH\]/i.test(t) ? "" : t;
         }
-        r.transcript = r.aiTranscript || r.liveTranscript || "";
+        r.transcript = r.empty ? "" : (r.aiTranscript || r.liveTranscript || "");
+        if (spokenWords(r.transcript) < 2) { r.transcript = ""; r.empty = true; }
         r.wpm = metrics(r.transcript, r.durationSec).wpm;
       }
       await updateAnswer(sid, aid, { rounds });
+      if (rounds.every((r) => r.empty)) { await markEmpty(0); return; }
       await status("세 번의 답변을 비교하고 교정하는 중…");
       analysis = await analyzeAnswer({ part: 2, cueCard: a.cueCard, rounds }, status);
     } else {
-      let wav = null;
-      if (set.aiTranscribe && a.audioKey) {
-        const blob = await idb.get("audio", a.audioKey);
-        if (blob) wav = await blobToWav(blob);
-      }
+      const { empty, dec } = await looksEmpty(a.audioKey, a.liveTranscript);
+      if (empty && !force) { await markEmpty(dec ? dec.voicedSec : 0); return; }
+      const wav = set.aiTranscribe && dec ? dec.wav : null;
       analysis = await analyzeAnswer({ part: a.part, question: a.question, cueCard: a.cueCard, transcript: a.liveTranscript, wavBlob: wav }, status);
     }
+    if (analysis.no_speech || (!a.rounds && spokenWords(analysis.transcript) < 2) || !analysis.corrected) { await markEmpty(null); return; }
     const source = a.cueCard ? a.cueCard.split("\n")[0] : a.question;
-    const added = await addToBank((analysis.expressions || []).map((e) => ({ ...e, sourceQuestion: source, sessionId: sid })), sid);
+    const added = await addToBank((analysis.expressions || []).map((e) => ({ ...e, sourceQuestion: source, sessionId: sid, answerId: aid })), sid);
     await updateAnswer(sid, aid, { status: "done", analysis, statusMsg: "", bankAdded: added, error: "" });
   } catch (e) {
     await updateAnswer(sid, aid, { status: "error", error: e.message, statusMsg: "" });
@@ -361,7 +381,12 @@ function answerCard(a, { practice = false } = {}) {
           <li><b>발음</b> ${esc(an.feedback?.pronunciation_ko)}</li>
         </ul>
         ${an.tips_ko ? `<div class="tip">🎯 다음 연습 포인트: ${esc(an.tips_ko)}</div>` : ""}
-      </section>`;
+      </section>
+      <div class="btns"><button class="btn ghost small" data-retry="${a.id}" title="교정을 처음부터 다시 받아요">🔄 다시 교정</button></div>`;
+  } else if (a.status === "empty") {
+    body = `<div class="notice">🔇 <b>답변이 감지되지 않았어요.</b> 녹음에 말소리가 (거의) 없어서 교정하지 않았어요.${typeof a.voicedSec === "number" ? ` (소리가 감지된 시간 약 ${a.voicedSec.toFixed(1)}초)` : ""}
+      <p class="muted small">실제로 말했는데 이렇게 나왔다면, 녹음을 들어 보고 아래 버튼으로 다시 확인받을 수 있어요. 마이크 소리가 작으면 이렇게 판단될 수 있어요.</p>
+      <button class="btn small ghost" data-retry="${a.id}" data-force="1">그래도 AI에게 확인받기</button></div>`;
   } else if (a.status === "nokey") {
     body = `<div class="notice">AI 교정을 받으려면 <a href="#settings">설정</a>에서 Gemini API 키를 넣어 주세요. 그 다음 아래 버튼을 누르면 돼요.
       <p class="transcript">${esc(a.liveTranscript || "(브라우저 받아쓰기 결과 없음)")}</p>
@@ -417,7 +442,7 @@ document.addEventListener("click", async (e) => {
   if (retry) {
     const sid = retry.closest("[data-sid]")?.dataset.sid;
     if (!hasKey()) { toast("설정에서 API 키를 먼저 넣어 주세요."); return; }
-    if (sid) enqueue(sid, retry.dataset.retry);
+    if (sid) enqueue(sid, retry.dataset.retry, { force: !!retry.dataset.force });
   }
 });
 
